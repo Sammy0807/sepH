@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SEP Health – Preventive Wellness Reinvented</title>
@@ -166,31 +167,65 @@
     <h2>Be the first to know when SEP Health launches</h2>
     <p>We’re working on something special. Sign up to get exclusive early access.</p>
     <div class="email-signup">
-      <input type="email" id="email" placeholder="Enter your email" required />
-      <input type="submit" value="Notify Me" onclick="signup()" />
+      <form id="email-form">
+        <input type="email" id="email" name="email" placeholder="Enter your email" required />
+        <input type="submit" value="Notify Me" />
+      </form>
       <div id="message"></div>
     </div>
     <h3 style="margin-top: 2rem; color: white;">Want to help us shape SEP Health?</h3>
     <p><a href="wellness-check.html" target="_blank" style="color: #26a69a; font-weight: bold; text-decoration: underline;">Tell us about your health habits</a> so we can personalize SEP Health to better serve you.</p>
 
   </footer>
-
   <script>
+    const form = document.getElementById("email-form");
+    const message = document.getElementById("message");
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const encodedEmail = encodeURIComponent(email.trim());
+    
+      if (!email.includes("@")) {
+        message.style.color = "red";
+        message.textContent = "Please enter a valid email address.";
+        setTimeout(() => (message.textContent = ""), 3000);
+        return;
+      }
+    
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbyiG82A_lV-VUSNlUPX7wDqDS4ICl_B7g-SjU7tkA_7okStojjZ7ejJma0pfKQPjDIklA/exec", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: `email=${encodedEmail}`,
+        });
+    
+        const text = await response.text();
+    
+        if (text.includes("Success")) {
+          message.style.color = "green";
+          message.textContent = "Thanks! You’ve been added to the waitlist.";
+        } else if (text.includes("Duplicate")) {
+          message.style.color = "orange";
+          message.textContent = "You're already on the waitlist.";
+        } else {
+          message.style.color = "red";
+          message.textContent = "Oops! Something went wrong.";
+        }
+    
+        form.reset();
+        setTimeout(() => (message.textContent = ""), 3000);
+      } catch (error) {
+        message.style.color = "red";
+        message.textContent = "Network error. Try again later.";
+        setTimeout(() => (message.textContent = ""), 3000);
+      }
+    });    
     function scrollToSignup() {
       document.querySelector('footer').scrollIntoView({ behavior: 'smooth' });
     }
-
-    function signup() {
-      const email = document.getElementById('email').value;
-      const message = document.getElementById('message');
-      if (!email.includes('@')) {
-        message.style.color = 'red';
-        message.textContent = 'Please enter a valid email address.';
-        return;
-      }
-      message.style.color = 'green';
-      message.textContent = 'Thanks! You will be notified when we launch.';
-    }
-  </script>
+  </script>  
 </body>
 </html>

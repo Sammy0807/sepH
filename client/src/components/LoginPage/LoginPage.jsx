@@ -69,6 +69,7 @@ function LoginPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
+            className="login-input"
           />
           <input
             type="password"
@@ -76,6 +77,7 @@ function LoginPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
+            className="login-input"
           />
           <input type="submit" value={registerMode ? 'Register' : 'Login'} />
         </form>
@@ -95,4 +97,4 @@ function LoginPage() {
 // PropTypes for type checking (currently no props, but good practice for future extensibility)
 LoginPage.propTypes = {};
 
-export default LoginPage; 
+export default LoginPage;

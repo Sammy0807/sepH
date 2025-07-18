@@ -23,6 +23,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+  align-items: center;
 }
 .login-form input[type="email"],
 .login-form input[type="password"] {
@@ -33,6 +34,9 @@
   outline: none;
   transition: border-color 0.2s;
   background: #f7fafc;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
 }
 .login-form input[type="email"]:focus,
 .login-form input[type="password"]:focus {
@@ -50,6 +54,9 @@
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(38, 166, 154, 0.08);
   transition: background 0.2s, box-shadow 0.2s;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 0.5rem;
 }
 .login-form input[type="submit"]:hover {
   background: linear-gradient(90deg, #4F46E5 60%, #26a69a 100%);

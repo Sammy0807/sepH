@@ -1,0 +1,52 @@
+/* Header styles */
+.hero-header {
+  position: relative;
+  background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80');
+  background-size: cover;
+  background-position: center;
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-overlay {
+  background: rgba(0, 77, 64, 0.7);
+  padding: 3rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+  width: 100%;
+  max-width: 700px;
+  margin: 3rem auto;
+}
+.hero-header h1 {
+  color: #fff;
+  font-size: 2.8rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.hero-header p {
+  color: #e0f2f1;
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+}
+.cta-button {
+  background: #26a69a;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  border-radius: 5px;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .hero-header {
+    min-height: 220px;
+  }
+  .hero-overlay {
+    padding: 1.5rem 0.5rem;
+  }
+} 

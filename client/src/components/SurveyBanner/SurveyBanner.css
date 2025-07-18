@@ -1,0 +1,13 @@
+.survey-banner {
+  background: #ffecb3;
+  padding: 1rem;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #5d4037;
+}
+.survey-banner a {
+  color: #00796b;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+} 

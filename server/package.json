@@ -1,6 +1,11 @@
 {
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "supertest": "^6.3.4"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

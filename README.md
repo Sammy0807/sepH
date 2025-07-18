@@ -43,10 +43,85 @@ SEPHealth/
 │   │   └── index.js                 # App entry point
 │   └── package.json
 ├── server/                          # Backend API server
-│   ├── index.js
+│   ├── index.js                     # Express app entry point
+│   ├── models/                      # Mongoose models (User, Waitlist)
+│   ├── controllers/                 # Route logic (auth, waitlist)
+│   ├── routes/                      # Express route definitions
 │   └── package.json
 └── README.md
 ```
+
+---
+
+## 🗄️ Backend (Server) Structure & Development
+
+The backend follows a classic **MVC (Model-View-Controller)** pattern for maintainability and scalability:
+
+- **models/**: Mongoose schemas and models (e.g., `User.js`, `Waitlist.js`)
+- **controllers/**: Business logic for each resource (e.g., `authController.js`, `waitlistController.js`)
+- **routes/**: Express route definitions, mapping endpoints to controller functions (e.g., `auth.js`, `waitlist.js`)
+- **index.js**: App entry point, connects to MongoDB, sets up middleware, and mounts routes
+
+### Example Flow
+- `POST /api/register` → `routes/auth.js` → `controllers/authController.js` → `models/User.js`
+- `POST /api/waitlist` → `routes/waitlist.js` → `controllers/waitlistController.js` → `models/Waitlist.js`
+
+### Adding a New Resource
+1. Create a new model in `models/`
+2. Add a controller in `controllers/`
+3. Define routes in `routes/`
+4. Mount the new route in `index.js`
+
+### Backend Development Guidelines
+- Keep business logic in controllers, not in routes or index.js
+- Use async/await for all database operations
+- Validate input in controllers
+- Use environment variables for secrets and DB URIs
+- Write tests for controllers and routes
+
+---
+
+## 🧪 Backend Testing
+
+Automated tests are essential for ensuring the reliability of your backend API. Use [Jest](https://jestjs.io/) and [Supertest](https://github.com/visionmedia/supertest) for testing Express routes and controllers.
+
+### Example Test File Structure
+```
+server/
+  └── tests/
+      ├── auth.test.js         # Tests for auth endpoints
+      └── waitlist.test.js     # Tests for waitlist endpoints
+```
+
+### Writing a Test (Example: Auth Route)
+```js
+// server/tests/auth.test.js
+const request = require('supertest');
+const app = require('../index'); // Export your Express app from index.js
+
+describe('Auth API', () => {
+  it('should register a new user', async () => {
+    const res = await request(app)
+      .post('/api/register')
+      .send({ email: 'test@example.com', password: 'password123' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+});
+```
+
+### Running Backend Tests
+```bash
+cd server
+npm install --save-dev jest supertest
+npm test
+```
+
+- Place all backend tests in `server/tests/`
+- Use `describe` and `it` blocks for organization
+- Mock database connections as needed for isolated tests
+
+---
 
 ## 🛠️ Setup & Installation
 

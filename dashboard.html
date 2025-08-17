@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SEPHealth</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .dashboard-layout {
+            display: flex;
+            min-height: 100vh;
+            background: #f4f6fb;
+        }
+        .side-panel {
+            width: 220px;
+            background: #004d40;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem 1rem 1rem;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+        }
+        .side-panel h2 {
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .side-panel nav {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+        .side-panel nav a {
+            color: #b2dfdb;
+            text-decoration: none;
+            font-size: 1.08rem;
+            transition: color 0.2s;
+        }
+        .side-panel nav a:hover {
+            color: #fff;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .top-nav {
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .top-nav .logo {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #004d40;
+        }
+        .user-menu {
+            position: relative;
+            display: inline-block;
+        }
+        .user-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #e0f2f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #004d40;
+            border: 2px solid #b2dfdb;
+            transition: box-shadow 0.2s;
+        }
+        .user-icon:hover {
+            box-shadow: 0 2px 8px rgba(0,77,64,0.12);
+        }
+        .user-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 48px;
+            background: #fff;
+            min-width: 120px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+            border-radius: 6px;
+            z-index: 10;
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 0.8rem 1.2rem;
+            color: #004d40;
+            text-decoration: none;
+            font-size: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .user-dropdown a:last-child {
+            border-bottom: none;
+        }
+        .user-dropdown a:hover {
+            background: #e0f2f1;
+        }
+        .dashboard-content {
+            flex: 1;
+            padding: 2.5rem 2rem;
+        }
+        @media (max-width: 900px) {
+            .dashboard-layout {
+                flex-direction: column;
+            }
+            .side-panel {
+                width: 100%;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem;
+            }
+            .main-content {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="side-panel">
+            <h2>SEPHealth</h2>
+            <nav>
+                <a href="#">Dashboard</a>
+                <a href="#">Profile</a>
+                <a href="#">Wellness Check</a>
+                <a href="#">Settings</a>
+            </nav>
+        </aside>
+        <div class="main-content">
+            <div class="top-nav">
+                <span class="logo">Dashboard</span>
+                <div class="user-menu">
+                    <div class="user-icon" id="userIcon" title="User">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="8" r="4" fill="#26a69a"/>
+                            <ellipse cx="12" cy="17" rx="7" ry="4" fill="#b2dfdb"/>
+                        </svg>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="#" id="logoutBtn">Logout</a>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-content">
+                <h1>Welcome to Your Dashboard</h1>
+                <p>This is your SEPHealth dashboard. You can customize this page to show user-specific information, stats, or navigation links.</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        // User icon dropdown logic
+        const userIcon = document.getElementById('userIcon');
+        const userDropdown = document.getElementById('userDropdown');
+        userIcon.addEventListener('click', function(e) {
+            userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!userIcon.contains(e.target) && !userDropdown.contains(e.target)) {
+                userDropdown.style.display = 'none';
+            }
+        });
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>

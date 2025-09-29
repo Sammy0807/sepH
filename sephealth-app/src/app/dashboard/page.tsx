@@ -791,7 +791,8 @@ export default function DashboardPage() {
                       border: '1px solid #d1d5db',
                       borderRadius: '8px',
                       fontSize: '1rem',
-                      outline: 'none'
+                      outline: 'none',
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
@@ -818,13 +819,19 @@ export default function DashboardPage() {
                       borderRadius: '8px',
                       fontSize: '1rem',
                       outline: 'none',
-                      resize: 'vertical'
+                      resize: 'vertical',
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
 
                 {/* Scheduling Options */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                  gap: '1.5rem',
+                  marginBottom: '1rem'
+                }}>
                   <div>
                     <label style={{ 
                       display: 'block', 
@@ -844,7 +851,8 @@ export default function DashboardPage() {
                         border: '1px solid #d1d5db',
                         borderRadius: '8px',
                         fontSize: '1rem',
-                        outline: 'none'
+                        outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
@@ -868,7 +876,8 @@ export default function DashboardPage() {
                         border: '1px solid #d1d5db',
                         borderRadius: '8px',
                         fontSize: '1rem',
-                        outline: 'none'
+                        outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
@@ -892,7 +901,8 @@ export default function DashboardPage() {
                         borderRadius: '8px',
                         fontSize: '1rem',
                         outline: 'none',
-                        background: '#fff'
+                        background: '#fff',
+                        boxSizing: 'border-box'
                       }}
                     >
                       <option value="utc">Send at UTC time</option>

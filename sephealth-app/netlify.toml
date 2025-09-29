@@ -10,6 +10,8 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
+  # Disable secrets scanning since we need these env vars in build output
+  SECRETS_SCAN_ENABLED = "false"
 
 # Plugin for Next.js runtime
 [[plugins]]

@@ -1,0 +1,314 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f3f4f6;
+  }
+
+  /* Navigation Styles */
+  .top-nav {
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+  }
+  
+  .nav-brand a {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #004d40;
+    text-decoration: none;
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .nav-link {
+    color: #004d40;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  
+  .nav-link:hover {
+    color: #26a69a;
+  }
+  
+  .wellness-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  
+  .wellness-container {
+    width: 100%;
+    max-width: 700px;
+    background-color: #fdfdfd;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+  
+  .wellness-title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #2c3e50;
+  }
+  
+  .wellness-progress {
+    text-align: center;
+    font-weight: 600;
+  }
+  
+  .wellness-question-block {
+    margin: 2rem 0;
+  }
+  
+  .wellness-question {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    color: #333;
+  }
+  
+  .wellness-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .wellness-option input {
+    margin-right: 0.5rem;
+  }
+  
+  .wellness-button {
+    margin-top: 1rem;
+    padding: 0.6rem 1.2rem;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .wellness-button.secondary {
+    background-color: #e5e7eb;
+    color: #1f2937;
+  }
+  
+  .wellness-button:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .wellness-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: #2d3748;
+    text-align: center;
+  }
+  
+  .wellness-text, .wellness-highlight {
+    color: #4a5568;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .wellness-highlight {
+    font-weight: 600;
+  }
+  
+  .wellness-buttons.spread {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1.5rem;
+  }
+
+/* --- SEP Health Landing Page Styles (from index.html) --- */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f7f9;
+  color: #333;
+}
+
+.survey-banner {
+  background: #ffecb3;
+  padding: 1rem;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #5d4037;
+}
+.survey-banner a {
+  color: #00796b;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+}
+
+header {
+  background: #004d40;
+  color: white;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+header h1 {
+  margin: 0;
+  font-size: 2.5rem;
+}
+header p {
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+}
+
+.cta-button {
+  background: #26a69a;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  border-radius: 5px;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+section.features {
+  padding: 2rem 1rem;
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.feature {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  flex: 1 1 300px;
+  text-align: center;
+}
+.feature img {
+  max-width: 100%;
+  height: 150px;
+  object-fit: contain;
+  margin-bottom: 1rem;
+}
+.feature h3 {
+  margin-top: 0;
+}
+
+footer {
+  background: #263238;
+  color: #ccc;
+  text-align: center;
+  padding: 2rem 1rem;
+  margin-top: 3rem;
+}
+
+.email-signup {
+  margin-top: 1rem;
+}
+
+input[type="email"] {
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 250px;
+}
+input[type="submit"] {
+  padding: 0.6rem 1rem;
+  background-color: #26a69a;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#message {
+  margin-top: 0.5rem;
+  font-weight: bold;
+}
+
+/* --- Hero Header Styles --- */
+.hero-header {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-overlay {
+  background: rgba(0, 77, 64, 0.7);
+  padding: 3rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+  width: 100%;
+  max-width: 700px;
+  margin: 3rem auto;
+}
+.hero-header h1 {
+  color: #fff;
+  font-size: 2.8rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.hero-header p {
+  color: #e0f2f1;
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Feature Images --- */
+.features .feature img {
+  width: 100%;
+  max-width: 320px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.features .feature h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  color: #004d40;
+}
+
+@media (max-width: 700px) {
+  .hero-header {
+    min-height: 220px;
+  }
+  .hero-overlay {
+    padding: 1.5rem 0.5rem;
+  }
+  .features .feature img {
+    max-width: 100%;
+    height: 120px;
+  }
+}

@@ -1,10 +1,7 @@
 # Netlify build configuration for Next.js SEP Health App
 [build]
   # Build command for Next.js
-  command = "npm run build"
-  
-  # Directory to publish (Next.js build output)
-  publish = ".next"
+  command = "npm install && npm run build"
   
   # Base directory for build
   base = "sephealth-app"
@@ -13,10 +10,8 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
-
-# Functions directory for API routes
-[functions]
-  directory = "netlify/functions"
+  # Disable secrets scanning since we need these env vars in build output
+  SECRETS_SCAN_ENABLED = "false"
 
 # Plugin for Next.js runtime
 [[plugins]]

@@ -55,9 +55,7 @@ export default function Home() {
         <div className="hero-overlay">
           <h1><i className="fa-solid fa-heart-pulse"></i> SEP Health</h1>
           <p>Your AI-powered companion for preventive wellness and smarter self-care.</p>
-          <button className="cta-button" onClick={scrollToSignup}>
-            Sign up to get early access
-          </button>
+          
         </div>
       </header>
 

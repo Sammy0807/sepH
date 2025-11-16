@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+.env.development
+.env.test
+.env.production
 
 # vercel
 .vercel
@@ -39,3 +43,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# MongoDB and database related
+*.mongo
+*.db
+*.dump
+mongodb-backup/
+
+# Sensitive configuration
+config/secrets.js
+config/database.js
+credentials.json
+
+# Logs
+logs/
+*.log
+
+# Local Netlify folder
+.netlify/

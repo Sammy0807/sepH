@@ -15,6 +15,7 @@ import {
   fetchUserAudiences,
   type UserAudience
 } from '../../lib/api/userAudience';
+import { formatMessageTimeCST } from '@/lib/api/pushMessages';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -44,12 +45,13 @@ export default function DashboardPage() {
     content: '',
     sendDate: '',
     sendTime: '09:00',
-    timezoneStrategy: 'utc',
+    timezoneStrategy: 'local',
     targetAudience: 'All Users'
   });
   
   const [messageHistory, setMessageHistory] = useState<PushMessage[]>([]);
   const [historyFilter, setHistoryFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [messageStats, setMessageStats] = useState<MessageStats>({
     sentToday: 0,
     deliveryRate: 0,
@@ -57,6 +59,7 @@ export default function DashboardPage() {
     scheduled: 0
   });
   const [loading, setLoading] = useState(false);
+  const MESSAGES_PER_PAGE = 7;
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [validationError, setValidationError] = useState<string>('');
@@ -71,6 +74,7 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         setError('');
+        setCurrentPage(1); // Reset to first page when filter changes
         const messages = await fetchMessages(historyFilter);
         setMessageHistory(messages);
         
@@ -190,7 +194,7 @@ export default function DashboardPage() {
         content: '',
         sendDate: '',
         sendTime: '09:00',
-        timezoneStrategy: 'utc',
+        timezoneStrategy: 'local',
         targetAudience: 'All Users'
       });
       
@@ -227,7 +231,7 @@ export default function DashboardPage() {
         content: '',
         sendDate: '',
         sendTime: '09:00',
-        timezoneStrategy: 'utc',
+        timezoneStrategy: 'local',
         targetAudience: 'All Users'
       });
       
@@ -864,7 +868,7 @@ export default function DashboardPage() {
                       color: '#374151',
                       fontWeight: '500'
                     }}>
-                      Send Time (UTC)
+                      Send Time (CST)
                     </label>
                     <input
                       type="time"
@@ -905,8 +909,8 @@ export default function DashboardPage() {
                         boxSizing: 'border-box'
                       }}
                     >
+                      <option value="local">Send at CST (Central Standard Time)</option>
                       <option value="utc">Send at UTC time</option>
-                      <option value="local">Send at local time for each user</option>
                       <option value="major">Send at major timezone hours</option>
                     </select>
                   </div>
@@ -1141,13 +1145,19 @@ export default function DashboardPage() {
                         <td colSpan={6} style={{ 
                           padding: '2rem', 
                           textAlign: 'center', 
-                          color: '#6b7280',
-                          fontStyle: 'italic'
+                          color: '#6b7280'
                         }}>
-                          {loading ? 'Loading messages...' : 'No messages found. Create your first message above!'}
+                          {loading ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                              <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', color: '#059669' }}></i>
+                              <span>Loading messages...</span>
+                            </div>
+                          ) : (
+                            'No messages found. Create your first message above!'
+                          )}
                         </td>
                       </tr>
-                    ) : messageHistory.map((message: PushMessage, index: number) => (
+                    ) : messageHistory.slice((currentPage - 1) * MESSAGES_PER_PAGE, currentPage * MESSAGES_PER_PAGE).map((message: PushMessage, index: number) => (
                       <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
                         <td style={{ padding: '1rem 0.5rem' }}>
                           <div style={{ fontWeight: '500', color: '#1f2937' }}>{message.title}</div>
@@ -1164,7 +1174,7 @@ export default function DashboardPage() {
                             {message.status}
                           </span>
                         </td>
-                        <td style={{ padding: '1rem 0.5rem', color: '#6b7280' }}>{formatMessageTime(message)}</td>
+                        <td style={{ padding: '1rem 0.5rem', color: '#6b7280' }}>{formatMessageTimeCST(message)}</td>
                         <td style={{ padding: '1rem 0.5rem', color: '#1f2937' }}>{message.recipients.toLocaleString()}</td>
                         <td style={{ padding: '1rem 0.5rem', color: '#1f2937' }}>{message.deliveryRate}</td>
                         <td style={{ padding: '1rem 0.5rem' }}>
@@ -1205,6 +1215,81 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {messageHistory.length > 0 && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginTop: '1.5rem',
+                  paddingTop: '1.5rem',
+                  borderTop: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                    Showing {Math.min((currentPage - 1) * MESSAGES_PER_PAGE + 1, messageHistory.length)} to {Math.min(currentPage * MESSAGES_PER_PAGE, messageHistory.length)} of {messageHistory.length} messages
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: currentPage === 1 ? '#e5e7eb' : '#fff',
+                        color: currentPage === 1 ? '#9ca3af' : '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <i className="fa-solid fa-chevron-left" style={{ marginRight: '0.5rem' }}></i>
+                      Previous
+                    </button>
+                    
+                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                      {Array.from({ length: Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) }).map((_, index) => (
+                        <button
+                          key={index + 1}
+                          onClick={() => setCurrentPage(index + 1)}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            minWidth: '2.5rem',
+                            background: currentPage === index + 1 ? '#059669' : '#f3f4f6',
+                            color: currentPage === index + 1 ? '#fff' : '#374151',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            fontWeight: currentPage === index + 1 ? '600' : '500'
+                          }}
+                        >
+                          {index + 1}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(messageHistory.length / MESSAGES_PER_PAGE), prev + 1))}
+                      disabled={currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) ? '#e5e7eb' : '#fff',
+                        color: currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) ? '#9ca3af' : '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        cursor: currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) ? 'not-allowed' : 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                      Next
+                      <i className="fa-solid fa-chevron-right" style={{ marginLeft: '0.5rem' }}></i>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1613,7 +1698,7 @@ export default function DashboardPage() {
                     color: '#1f2937',
                     margin: 0
                   }}>
-                    {viewingMessage.sendDate} at {viewingMessage.sendTime}
+                    {formatMessageTimeCST(viewingMessage)}
                   </p>
                 </div>
 
@@ -1659,7 +1744,7 @@ export default function DashboardPage() {
                     margin: 0,
                     fontSize: '0.9rem'
                   }}>
-                    {new Date(viewingMessage.createdAt).toLocaleString()}
+                    {new Date((viewingMessage.createdAt as { utc: string }).utc).toLocaleString()}
                   </p>
                 </div>
               </div>

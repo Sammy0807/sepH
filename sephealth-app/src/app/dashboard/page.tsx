@@ -1,25 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import Link from 'next/link';
 import '../../style.css';
-import { 
-  fetchMessages, 
-  createMessage, 
-  deleteMessage, 
+import {
+  fetchMessages,
+  createMessage,
+  deleteMessage,
   fetchMessageStats,
   type PushMessage,
   type MessageStats
 } from '../../lib/api/pushMessages';
-import { 
+import {
   fetchUserAudiences,
   type UserAudience
 } from '../../lib/api/userAudience';
-import { formatMessageTimeCST } from '@/lib/api/pushMessages';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
-  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Toggle sidebar for mobile
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // Close sidebar when clicking a menu item on mobile
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+  };
+
   // Push Messages State
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -31,27 +41,44 @@ export default function DashboardPage() {
   };
 
   const formatMessageTime = (message: PushMessage) => {
-    if (message.status === 'Draft') {
-      return `Created ${new Date(message.createdAt).toLocaleDateString()}`;
-    }
-    if (message.status === 'Scheduled') {
-      return `${message.sendDate} at ${message.sendTime} UTC`;
-    }
-    return `${message.sendDate} at ${message.sendTime} UTC`;
+    const dateToFormat = message.scheduledDateTime || message.createdAt;
+    if (!dateToFormat) return 'N/A';
+
+    const date = new Date(dateToFormat);
+    return date.toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }) + ' CST';
   };
+
+  // Set default date/time to tomorrow at 9 AM to avoid "past time" errors
+  const getDefaultDateTime = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    
+    const dateStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+    return { date: dateStr, time: '09:00' };
+  };
+
+  const defaultDateTime = getDefaultDateTime();
 
   const [messageForm, setMessageForm] = useState({
     title: '',
     content: '',
-    sendDate: '',
-    sendTime: '09:00',
-    timezoneStrategy: 'local',
+    sendDate: defaultDateTime.date,
+    sendTime: defaultDateTime.time,
+    timezoneStrategy: 'cst',
     targetAudience: 'All Users'
   });
-  
+
   const [messageHistory, setMessageHistory] = useState<PushMessage[]>([]);
   const [historyFilter, setHistoryFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [messageStats, setMessageStats] = useState<MessageStats>({
     sentToday: 0,
     deliveryRate: 0,
@@ -59,7 +86,6 @@ export default function DashboardPage() {
     scheduled: 0
   });
   const [loading, setLoading] = useState(false);
-  const MESSAGES_PER_PAGE = 7;
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [validationError, setValidationError] = useState<string>('');
@@ -74,10 +100,9 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         setError('');
-        setCurrentPage(1); // Reset to first page when filter changes
         const messages = await fetchMessages(historyFilter);
         setMessageHistory(messages);
-        
+
         // Only load stats on initial load or when filter is 'all'
         if (historyFilter === 'all') {
           const stats = await fetchMessageStats();
@@ -89,7 +114,7 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
-    
+
     loadData();
   }, [historyFilter]);
 
@@ -107,7 +132,7 @@ export default function DashboardPage() {
         setAudienceLoading(false);
       }
     };
-    
+
     loadUserAudiences();
   }, []);
 
@@ -117,10 +142,48 @@ export default function DashboardPage() {
       const timer = setTimeout(() => {
         setSuccessMessage('');
       }, 45000); // 45 seconds
-      
+
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  // Auto-dismiss validation errors after 45 seconds
+  useEffect(() => {
+    const backendUrl = 'http://192.168.5.221:3001';
+    const socket = io(backendUrl);
+
+    socket.on('connect', () => {
+      console.log('✅ Real-time updates connected (Socket.io)');
+    });
+
+    socket.on('statusUpdate', (update) => {
+      console.log('🚀 Real-time status update received:', update);
+
+      setMessageHistory(prev => prev.map(msg => {
+        if (msg._id === update.messageId) {
+          return {
+            ...msg,
+            status: update.status,
+            deliveredAt: update.deliveredAt
+          };
+        }
+        return msg;
+      }));
+
+      // Refresh stats on important transitions
+      if (update.status === 'Sent' || update.status === 'Failed') {
+        fetchMessageStats().then(setMessageStats).catch(console.error);
+      }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('❌ Socket.io connection error:', err.message);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   // Auto-dismiss validation errors after 45 seconds
   useEffect(() => {
@@ -128,7 +191,7 @@ export default function DashboardPage() {
       const timer = setTimeout(() => {
         setValidationError('');
       }, 45000); // 45 seconds
-      
+
       return () => clearTimeout(timer);
     }
   }, [validationError]);
@@ -139,7 +202,7 @@ export default function DashboardPage() {
       const timer = setTimeout(() => {
         setError('');
       }, 45000); // 45 seconds
-      
+
       return () => clearTimeout(timer);
     }
   }, [error]);
@@ -150,7 +213,7 @@ export default function DashboardPage() {
       setError('');
       const messages = await fetchMessages(historyFilter);
       setMessageHistory(messages);
-      
+
       const stats = await fetchMessageStats();
       setMessageStats(stats);
     } catch (err) {
@@ -181,23 +244,24 @@ export default function DashboardPage() {
       setError('');
       setSuccessMessage('');
       setValidationError('');
-      
+
       await createMessage({
         ...messageForm,
         targetAudience: [messageForm.targetAudience],
         status: 'Draft'
       });
-      
+
       // Reset form and reload data
+      const newDefaultDateTime = getDefaultDateTime();
       setMessageForm({
         title: '',
         content: '',
-        sendDate: '',
-        sendTime: '09:00',
-        timezoneStrategy: 'local',
+        sendDate: newDefaultDateTime.date,
+        sendTime: newDefaultDateTime.time,
+        timezoneStrategy: 'cst',
         targetAudience: 'All Users'
       });
-      
+
       await loadData();
       setSuccessMessage('Message saved as draft!');
     } catch (err) {
@@ -218,23 +282,24 @@ export default function DashboardPage() {
       setError('');
       setSuccessMessage('');
       setValidationError('');
-      
+
       await createMessage({
         ...messageForm,
         targetAudience: [messageForm.targetAudience],
         status: 'Scheduled'
       });
-      
+
       // Reset form and reload data
+      const newDefaultDateTime = getDefaultDateTime();
       setMessageForm({
         title: '',
         content: '',
-        sendDate: '',
-        sendTime: '09:00',
-        timezoneStrategy: 'local',
+        sendDate: newDefaultDateTime.date,
+        sendTime: newDefaultDateTime.time,
+        timezoneStrategy: 'cst',
         targetAudience: 'All Users'
       });
-      
+
       await loadData();
       setSuccessMessage('Message scheduled successfully!');
     } catch (err) {
@@ -250,9 +315,9 @@ export default function DashboardPage() {
 
   const handleCancelMessage = (messageId: string, messageTitle?: string) => {
     // Show confirmation modal
-    setDeletingMessage({ 
-      id: messageId, 
-      title: messageTitle || 'Untitled Message' 
+    setDeletingMessage({
+      id: messageId,
+      title: messageTitle || 'Untitled Message'
     });
   };
 
@@ -264,7 +329,7 @@ export default function DashboardPage() {
       setError('');
       setSuccessMessage('');
       setValidationError('');
-      
+
       await deleteMessage(deletingMessage.id);
       await loadData();
       setSuccessMessage('Message cancelled successfully!');
@@ -280,27 +345,42 @@ export default function DashboardPage() {
 
 
   return (
-    <div style={{ 
-      display: 'flex',
-      minHeight: '100vh',
-      background: '#f4f6fb'
-    }}>
+    <div className="dashboard-container">
+      {/* Mobile Header */}
+      <div className="mobile-header">
+        <h1 style={{ color: '#fff', fontSize: '1.2rem', margin: 0, fontWeight: 'bold' }}>
+          <i className="fa-solid fa-shield-halved"></i> SEP Admin
+        </h1>
+        <button
+          onClick={toggleSidebar}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            fontSize: '1.5rem',
+            cursor: 'pointer'
+          }}
+        >
+          <i className={`fa-solid ${isSidebarOpen ? 'fa-xmark' : 'fa-bars'}`}></i>
+        </button>
+      </div>
+
+      {/* Sidebar Overlay */}
+      <div
+        className={`sidebar-overlay ${isSidebarOpen ? 'visible' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
+      ></div>
+
       {/* Sidebar */}
-      <div style={{
-        width: '280px',
-        background: '#fff',
-        borderRight: '1px solid #e5e7eb',
-        padding: '2rem 0',
-        boxShadow: '2px 0 10px rgba(0,0,0,0.05)'
-      }}>
+      <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         {/* Logo/Header */}
-        <div style={{ 
+        <div style={{
           padding: '0 2rem',
           marginBottom: '2rem',
           borderBottom: '1px solid #e5e7eb',
           paddingBottom: '2rem'
         }}>
-          <h1 style={{ 
+          <h1 style={{
             color: '#004d40',
             fontSize: '1.5rem',
             margin: 0,
@@ -327,7 +407,7 @@ export default function DashboardPage() {
           ].map(item => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleTabChange(item.id)}
               style={{
                 width: '100%',
                 padding: '1rem 1.5rem',
@@ -354,14 +434,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content */}
-      <div style={{ flex: 1, padding: '2rem' }}>
+      <div className="main-content">
         {/* Header */}
-        <div style={{ 
+        <div className="dashboard-header-text" style={{
           marginBottom: '2rem',
           paddingBottom: '1rem',
           borderBottom: '1px solid #e5e7eb'
         }}>
-          <h2 style={{ 
+          <h2 style={{
             color: '#1f2937',
             fontSize: '2rem',
             margin: 0,
@@ -389,8 +469,8 @@ export default function DashboardPage() {
                 justifyContent: 'space-between'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <i className="fa-solid fa-triangle-exclamation" style={{ 
-                    color: '#dc2626', 
+                  <i className="fa-solid fa-triangle-exclamation" style={{
+                    color: '#dc2626',
                     marginRight: '0.75rem',
                     fontSize: '1.1rem'
                   }}></i>
@@ -411,7 +491,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             )}
-            
+
             {successMessage && (
               <div style={{
                 padding: '1rem 1.5rem',
@@ -424,8 +504,8 @@ export default function DashboardPage() {
                 justifyContent: 'space-between'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <i className="fa-solid fa-circle-check" style={{ 
-                    color: '#059669', 
+                  <i className="fa-solid fa-circle-check" style={{
+                    color: '#059669',
                     marginRight: '0.75rem',
                     fontSize: '1.1rem'
                   }}></i>
@@ -446,7 +526,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             )}
-            
+
             {validationError && (
               <div style={{
                 padding: '1rem 1.5rem',
@@ -459,8 +539,8 @@ export default function DashboardPage() {
                 justifyContent: 'space-between'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <i className="fa-solid fa-exclamation-triangle" style={{ 
-                    color: '#d97706', 
+                  <i className="fa-solid fa-exclamation-triangle" style={{
+                    color: '#d97706',
                     marginRight: '0.75rem',
                     fontSize: '1.1rem'
                   }}></i>
@@ -488,38 +568,33 @@ export default function DashboardPage() {
         {activeTab === 'overview' && (
           <div>
             {/* Quick Stats */}
-            <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '2rem'
-            }}>
+            <div className="dashboard-stats-grid">
               {[
-                { 
-                  title: 'Total Users', 
-                  value: '1,247', 
-                  icon: 'fa-users', 
+                {
+                  title: 'Total Users',
+                  value: '1,247',
+                  icon: 'fa-users',
                   color: '#059669',
                   trend: '+23 new this week'
                 },
-                { 
-                  title: 'Active Sessions', 
-                  value: '342', 
-                  icon: 'fa-activity', 
+                {
+                  title: 'Active Sessions',
+                  value: '342',
+                  icon: 'fa-activity',
                   color: '#2563eb',
                   trend: 'Currently online'
                 },
-                { 
-                  title: 'Wellness Assessments', 
-                  value: '89', 
-                  icon: 'fa-heart-pulse', 
+                {
+                  title: 'Wellness Assessments',
+                  value: '89',
+                  icon: 'fa-heart-pulse',
                   color: '#dc2626',
                   trend: 'Completed today'
                 },
-                { 
-                  title: 'System Health', 
-                  value: '99.8%', 
-                  icon: 'fa-server', 
+                {
+                  title: 'System Health',
+                  value: '99.8%',
+                  icon: 'fa-server',
                   color: '#7c3aed',
                   trend: 'All systems operational'
                 }
@@ -534,13 +609,13 @@ export default function DashboardPage() {
                     border: '1px solid #f3f4f6'
                   }}
                 >
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
                     marginBottom: '1rem'
                   }}>
-                    <h3 style={{ 
+                    <h3 style={{
                       color: '#6b7280',
                       fontSize: '0.9rem',
                       margin: 0,
@@ -550,12 +625,12 @@ export default function DashboardPage() {
                     }}>
                       {stat.title}
                     </h3>
-                    <i 
+                    <i
                       className={`fa-solid ${stat.icon}`}
                       style={{ color: stat.color, fontSize: '1.2rem' }}
                     ></i>
                   </div>
-                  <p style={{ 
+                  <p style={{
                     color: '#1f2937',
                     fontSize: '1.75rem',
                     fontWeight: 'bold',
@@ -563,7 +638,7 @@ export default function DashboardPage() {
                   }}>
                     {stat.value}
                   </p>
-                  <p style={{ 
+                  <p style={{
                     color: '#6b7280',
                     fontSize: '0.85rem',
                     margin: 0
@@ -582,7 +657,7 @@ export default function DashboardPage() {
               boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
               border: '1px solid #f3f4f6'
             }}>
-              <h3 style={{ 
+              <h3 style={{
                 color: '#1f2937',
                 fontSize: '1.25rem',
                 marginBottom: '1.5rem',
@@ -590,21 +665,21 @@ export default function DashboardPage() {
               }}>
                 System Activity
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="activity-list">
                 {[
-                  { 
+                  {
                     action: '23 new user registrations',
                     time: '2 hours ago',
                     icon: 'fa-user-plus',
                     color: '#059669'
                   },
-                  { 
+                  {
                     action: 'Database backup completed',
                     time: '6 hours ago',
                     icon: 'fa-database',
                     color: '#7c3aed'
                   },
-                  { 
+                  {
                     action: 'System maintenance scheduled',
                     time: '1 day ago',
                     icon: 'fa-wrench',
@@ -622,19 +697,19 @@ export default function DashboardPage() {
                       gap: '1rem'
                     }}
                   >
-                    <i 
+                    <i
                       className={`fa-solid ${activity.icon}`}
                       style={{ color: activity.color, fontSize: '1.1rem' }}
                     ></i>
                     <div style={{ flex: 1 }}>
-                      <p style={{ 
+                      <p style={{
                         color: '#1f2937',
                         margin: 0,
                         fontWeight: '500'
                       }}>
                         {activity.action}
                       </p>
-                      <p style={{ 
+                      <p style={{
                         color: '#6b7280',
                         margin: 0,
                         fontSize: '0.85rem'
@@ -657,7 +732,7 @@ export default function DashboardPage() {
             boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
             border: '1px solid #f3f4f6'
           }}>
-            <h3 style={{ 
+            <h3 style={{
               color: '#1f2937',
               fontSize: '1.5rem',
               marginBottom: '1rem',
@@ -709,7 +784,7 @@ export default function DashboardPage() {
             boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
             border: '1px solid #f3f4f6'
           }}>
-            <h3 style={{ 
+            <h3 style={{
               color: '#1f2937',
               fontSize: '1.5rem',
               marginBottom: '1rem',
@@ -761,7 +836,7 @@ export default function DashboardPage() {
               boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
               border: '1px solid #f3f4f6'
             }}>
-              <h3 style={{ 
+              <h3 style={{
                 color: '#1f2937',
                 fontSize: '1.5rem',
                 marginBottom: '1rem',
@@ -772,13 +847,13 @@ export default function DashboardPage() {
               <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
                 Send push notifications to your global user base with timezone-aware scheduling.
               </p>
-              
+
               <form style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {/* Message Title */}
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
                     color: '#374151',
                     fontWeight: '500'
                   }}>
@@ -803,9 +878,9 @@ export default function DashboardPage() {
 
                 {/* Message Content */}
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
                     color: '#374151',
                     fontWeight: '500'
                   }}>
@@ -830,16 +905,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Scheduling Options */}
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-                  gap: '1.5rem',
-                  marginBottom: '1rem'
-                }}>
+                <div className="dashboard-stats-grid" style={{ marginBottom: '1rem' }}>
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       color: '#374151',
                       fontWeight: '500'
                     }}>
@@ -860,15 +930,15 @@ export default function DashboardPage() {
                       }}
                     />
                   </div>
-                  
+
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       color: '#374151',
                       fontWeight: '500'
                     }}>
-                      Send Time (CST)
+                      Send Time (UTC)
                     </label>
                     <input
                       type="time"
@@ -885,11 +955,29 @@ export default function DashboardPage() {
                       }}
                     />
                   </div>
+                </div>
 
+                {/* Timezone info note */}
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  fontSize: '0.875rem',
+                  color: '#1e40af'
+                }}>
+                  <strong>ℹ️ Time Zone Note:</strong> Current UTC time is {new Date().toISOString().split('T')[1].split('.')[0]}. 
+                  {messageForm.timezoneStrategy === 'utc' ? ' Times are in UTC.' : ' Times will be converted from CST to UTC.'}
+                  {' '}Schedule must be in the future.
+                </div>
+
+                {/* Timezone Strategy */}
+                <div className="dashboard-stats-grid" style={{ marginBottom: '1rem' }}>
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '0.5rem', 
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
                       color: '#374151',
                       fontWeight: '500'
                     }}>
@@ -909,8 +997,8 @@ export default function DashboardPage() {
                         boxSizing: 'border-box'
                       }}
                     >
-                      <option value="local">Send at CST (Central Standard Time)</option>
                       <option value="utc">Send at UTC time</option>
+                      <option value="local">Send at local time for each user</option>
                       <option value="major">Send at major timezone hours</option>
                     </select>
                   </div>
@@ -918,9 +1006,9 @@ export default function DashboardPage() {
 
                 {/* Target Audience */}
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem', 
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
                     color: '#374151',
                     fontWeight: '500'
                   }}>
@@ -930,8 +1018,8 @@ export default function DashboardPage() {
                     {userAudiences.length > 0 ? (
                       userAudiences.map(audience => (
                         <label key={audience.audienceType} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <input 
-                            type="radio" 
+                          <input
+                            type="radio"
                             name="targetAudience"
                             value={audience.audienceType}
                             checked={messageForm.targetAudience === audience.audienceType}
@@ -943,8 +1031,8 @@ export default function DashboardPage() {
                     ) : (
                       ['All Users', 'Active Users', 'New Users', 'Premium Users'].map(audienceType => (
                         <label key={audienceType} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <input 
-                            type="radio" 
+                          <input
+                            type="radio"
                             name="targetAudience"
                             value={audienceType}
                             checked={messageForm.targetAudience === audienceType}
@@ -955,16 +1043,16 @@ export default function DashboardPage() {
                       ))
                     )}
                   </div>
-                  <div style={{ 
-                    marginTop: '0.5rem', 
-                    padding: '0.75rem', 
-                    background: '#f3f4f6', 
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '0.75rem',
+                    background: '#f3f4f6',
                     borderRadius: '6px',
                     fontSize: '0.9rem',
                     color: '#6b7280'
                   }}>
                     <i className="fa-solid fa-info-circle" style={{ marginRight: '0.5rem', color: '#3b82f6' }}></i>
-                    <strong>Recipients:</strong> The system automatically calculates the estimated number of users 
+                    <strong>Recipients:</strong> The system automatically calculates the estimated number of users
                     who will receive this message based on your audience selection:
                     <ul style={{ margin: '0.5rem 0 0 1.5rem', paddingLeft: '0' }}>
                       {userAudiences.length > 0 ? (
@@ -1004,18 +1092,19 @@ export default function DashboardPage() {
                   </button>
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={handleScheduleMessage}
                     style={{
                       padding: '0.75rem 1.5rem',
-                      background: '#059669',
+                      background: loading ? '#9ca3af' : '#059669',
                       color: '#fff',
                       border: 'none',
                       borderRadius: '8px',
                       fontWeight: '600',
-                      cursor: 'pointer'
+                      cursor: loading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <i className="fa-solid fa-paper-plane"></i> Schedule Message
+                    <i className={`fa-solid ${loading ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`}></i> {loading ? 'Scheduling...' : 'Schedule Message'}
                   </button>
                 </div>
               </form>
@@ -1029,7 +1118,7 @@ export default function DashboardPage() {
               boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
               border: '1px solid #f3f4f6'
             }}>
-              <h3 style={{ 
+              <h3 style={{
                 color: '#1f2937',
                 fontSize: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1037,11 +1126,7 @@ export default function DashboardPage() {
               }}>
                 Message Statistics
               </h3>
-              <div style={{ 
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '1.5rem'
-              }}>
+              <div className="dashboard-stats-grid">
                 {[
                   { label: 'Messages Sent Today', value: messageStats.sentToday.toString(), icon: 'fa-paper-plane', color: '#059669' },
                   { label: 'Total Delivery Rate', value: messageStats.deliveryRate + '%', icon: 'fa-check-circle', color: '#2563eb' },
@@ -1049,24 +1134,24 @@ export default function DashboardPage() {
                   { label: 'Scheduled Messages', value: messageStats.scheduled.toString(), icon: 'fa-clock', color: '#dc2626' }
                 ].map((stat, index) => (
                   <div key={index} style={{ textAlign: 'center' }}>
-                    <i 
+                    <i
                       className={`fa-solid ${stat.icon}`}
-                      style={{ 
-                        fontSize: '2rem', 
+                      style={{
+                        fontSize: '2rem',
                         color: stat.color,
                         marginBottom: '0.5rem'
                       }}
                     ></i>
-                    <div style={{ 
-                      fontSize: '1.5rem', 
+                    <div style={{
+                      fontSize: '1.5rem',
                       fontWeight: 'bold',
                       color: '#1f2937',
                       marginBottom: '0.25rem'
                     }}>
                       {stat.value}
                     </div>
-                    <div style={{ 
-                      fontSize: '0.9rem', 
+                    <div style={{
+                      fontSize: '0.9rem',
                       color: '#6b7280'
                     }}>
                       {stat.label}
@@ -1085,7 +1170,7 @@ export default function DashboardPage() {
               border: '1px solid #f3f4f6'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ 
+                <h3 style={{
                   color: '#1f2937',
                   fontSize: '1.25rem',
                   margin: 0,
@@ -1095,7 +1180,7 @@ export default function DashboardPage() {
                 </h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   {['all', 'sent', 'scheduled', 'drafts'].map(filter => (
-                    <button 
+                    <button
                       key={filter}
                       onClick={() => setHistoryFilter(filter)}
                       style={{
@@ -1115,8 +1200,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="responsive-table-wrapper">
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
                       <th style={{ textAlign: 'left', padding: '1rem 0.5rem', color: '#6b7280', fontWeight: '500' }}>Message</th>
@@ -1124,11 +1209,11 @@ export default function DashboardPage() {
                       <th style={{ textAlign: 'left', padding: '1rem 0.5rem', color: '#6b7280', fontWeight: '500' }}>Sent Time</th>
                       <th style={{ textAlign: 'left', padding: '1rem 0.5rem', color: '#6b7280', fontWeight: '500' }}>
                         Recipients
-                        <i 
-                          className="fa-solid fa-question-circle" 
-                          style={{ 
-                            marginLeft: '0.5rem', 
-                            fontSize: '0.8rem', 
+                        <i
+                          className="fa-solid fa-question-circle"
+                          style={{
+                            marginLeft: '0.5rem',
+                            fontSize: '0.8rem',
                             color: '#9ca3af',
                             cursor: 'help'
                           }}
@@ -1142,22 +1227,16 @@ export default function DashboardPage() {
                   <tbody>
                     {messageHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ 
-                          padding: '2rem', 
-                          textAlign: 'center', 
-                          color: '#6b7280'
+                        <td colSpan={6} style={{
+                          padding: '2rem',
+                          textAlign: 'center',
+                          color: '#6b7280',
+                          fontStyle: 'italic'
                         }}>
-                          {loading ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                              <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '1.5rem', color: '#059669' }}></i>
-                              <span>Loading messages...</span>
-                            </div>
-                          ) : (
-                            'No messages found. Create your first message above!'
-                          )}
+                          {loading ? 'Loading messages...' : 'No messages found. Create your first message above!'}
                         </td>
                       </tr>
-                    ) : messageHistory.slice((currentPage - 1) * MESSAGES_PER_PAGE, currentPage * MESSAGES_PER_PAGE).map((message: PushMessage, index: number) => (
+                    ) : messageHistory.map((message: PushMessage, index: number) => (
                       <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
                         <td style={{ padding: '1rem 0.5rem' }}>
                           <div style={{ fontWeight: '500', color: '#1f2937' }}>{message.title}</div>
@@ -1174,12 +1253,12 @@ export default function DashboardPage() {
                             {message.status}
                           </span>
                         </td>
-                        <td style={{ padding: '1rem 0.5rem', color: '#6b7280' }}>{formatMessageTimeCST(message)}</td>
+                        <td style={{ padding: '1rem 0.5rem', color: '#6b7280' }}>{formatMessageTime(message)}</td>
                         <td style={{ padding: '1rem 0.5rem', color: '#1f2937' }}>{message.recipients.toLocaleString()}</td>
                         <td style={{ padding: '1rem 0.5rem', color: '#1f2937' }}>{message.deliveryRate}</td>
                         <td style={{ padding: '1rem 0.5rem' }}>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button 
+                            <button
                               onClick={() => handleViewMessage(message)}
                               style={{
                                 padding: '0.25rem 0.5rem',
@@ -1193,7 +1272,7 @@ export default function DashboardPage() {
                               View
                             </button>
                             {message.status === 'Scheduled' && (
-                              <button 
+                              <button
                                 onClick={() => handleCancelMessage(message._id, message.title)}
                                 style={{
                                   padding: '0.25rem 0.5rem',
@@ -1215,81 +1294,6 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
-
-              {/* Pagination Controls */}
-              {messageHistory.length > 0 && (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  marginTop: '1.5rem',
-                  paddingTop: '1.5rem',
-                  borderTop: '1px solid #e5e7eb'
-                }}>
-                  <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-                    Showing {Math.min((currentPage - 1) * MESSAGES_PER_PAGE + 1, messageHistory.length)} to {Math.min(currentPage * MESSAGES_PER_PAGE, messageHistory.length)} of {messageHistory.length} messages
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: currentPage === 1 ? '#e5e7eb' : '#fff',
-                        color: currentPage === 1 ? '#9ca3af' : '#374151',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                        fontWeight: '500'
-                      }}
-                    >
-                      <i className="fa-solid fa-chevron-left" style={{ marginRight: '0.5rem' }}></i>
-                      Previous
-                    </button>
-                    
-                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                      {Array.from({ length: Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) }).map((_, index) => (
-                        <button
-                          key={index + 1}
-                          onClick={() => setCurrentPage(index + 1)}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            minWidth: '2.5rem',
-                            background: currentPage === index + 1 ? '#059669' : '#f3f4f6',
-                            color: currentPage === index + 1 ? '#fff' : '#374151',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            fontWeight: currentPage === index + 1 ? '600' : '500'
-                          }}
-                        >
-                          {index + 1}
-                        </button>
-                      ))}
-                    </div>
-                    
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(messageHistory.length / MESSAGES_PER_PAGE), prev + 1))}
-                      disabled={currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) ? '#e5e7eb' : '#fff',
-                        color: currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) ? '#9ca3af' : '#374151',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        cursor: currentPage === Math.ceil(messageHistory.length / MESSAGES_PER_PAGE) ? 'not-allowed' : 'pointer',
-                        fontWeight: '500'
-                      }}
-                    >
-                      Next
-                      <i className="fa-solid fa-chevron-right" style={{ marginLeft: '0.5rem' }}></i>
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -1303,11 +1307,11 @@ export default function DashboardPage() {
             border: '1px solid #f3f4f6',
             textAlign: 'center'
           }}>
-            <i 
+            <i
               className="fa-solid fa-construction"
               style={{ fontSize: '3rem', color: '#6b7280', marginBottom: '1rem' }}
             ></i>
-            <h3 style={{ 
+            <h3 style={{
               color: '#1f2937',
               fontSize: '1.5rem',
               marginBottom: '1rem',
@@ -1394,7 +1398,7 @@ export default function DashboardPage() {
               }}>
                 Are you sure you want to cancel this scheduled message? The message will be permanently removed and cannot be recovered.
               </p>
-              
+
               <div style={{
                 padding: '1rem',
                 backgroundColor: '#f9fafb',
@@ -1621,10 +1625,10 @@ export default function DashboardPage() {
                     borderRadius: '20px',
                     fontSize: '0.9rem',
                     fontWeight: '500',
-                    background: viewingMessage.status === 'Delivered' ? '#dcfce7' : 
-                               viewingMessage.status === 'Scheduled' ? '#fef3cd' : '#fef2f2',
-                    color: viewingMessage.status === 'Delivered' ? '#059669' : 
-                           viewingMessage.status === 'Scheduled' ? '#d97706' : '#dc2626'
+                    background: viewingMessage.status === 'Delivered' ? '#dcfce7' :
+                      viewingMessage.status === 'Scheduled' ? '#fef3cd' : '#fef2f2',
+                    color: viewingMessage.status === 'Delivered' ? '#059669' :
+                      viewingMessage.status === 'Scheduled' ? '#d97706' : '#dc2626'
                   }}>
                     {viewingMessage.status}
                   </span>
@@ -1698,7 +1702,18 @@ export default function DashboardPage() {
                     color: '#1f2937',
                     margin: 0
                   }}>
-                    {formatMessageTimeCST(viewingMessage)}
+                    {viewingMessage.scheduledDateTime ?
+                      new Date(viewingMessage.scheduledDateTime).toLocaleString('en-US', {
+                        timeZone: 'America/Chicago',
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      }) + ' CST' :
+                      'Not scheduled'
+                    }
                   </p>
                 </div>
 
@@ -1744,7 +1759,16 @@ export default function DashboardPage() {
                     margin: 0,
                     fontSize: '0.9rem'
                   }}>
-                    {new Date((viewingMessage.createdAt as { utc: string }).utc).toLocaleString()}
+                    {new Date(viewingMessage.createdAt).toLocaleString('en-US', {
+                      timeZone: 'America/Chicago',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true
+                    })} CST
                   </p>
                 </div>
               </div>
